@@ -1,0 +1,29 @@
+{
+  "name": "hisaab-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A calm, AI-assisted expense tracker for people and small businesses.",
+  "scripts": {
+    "dev": "concurrently -k -n API,WEB -c cyan,magenta \"node server/index.js\" \"vite --host 0.0.0.0\"",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "db:migrate": "node server/migrate.js",
+    "check": "npm run build"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "@vitejs/plugin-react": "latest",
+    "concurrently": "latest",
+    "dotenv": "^17.4.2",
+    "express": "latest",
+    "lucide-react": "latest",
+    "pg": "^8.23.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

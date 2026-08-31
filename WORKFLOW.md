@@ -1,68 +1,78 @@
-# Workflow — Arena agent ↔ local VS Code (PowerShell)
+# Workflow — local VS Code (PowerShell) ↔ GitHub ↔ Arena agent
 
-The contract below governs every change made in this repository.
+This repository moves through three places. The GitHub repo
+(`Siddharth-gitch/hisaab-ai`) is the hub that keeps them in sync.
 
 ## Environments
 
-- **Agent sandbox** (`/home/user/hisaab-ai`, Linux): writes code, commits, and
-  pushes to `origin` at the end of every turn that changes files.
-- **Local desktop** (Windows, VS Code, PowerShell): where you review, run, and
-  test. The local `.env` file is the single source of truth for configuration
-  and secrets.
+1. **Local desktop** (Windows, VS Code, PowerShell) — your primary
+   development environment. You edit code here. Your local `.env` is the
+   single source of truth for configuration and secrets.
+2. **GitHub** (`origin`) — the hub. Your local pushes land here (usually on
+   `main`); the agent's pushes land on `arena/01a05887-hisaab-ai`.
+3. **Arena chat workspace** (`/home/user/hisaab-ai`) — a clone of the repo
+   where the agent picks up your latest code and builds improvements.
 
-## Ground rules
+## Direction 1 — you change code, the agent picks it up
 
-1. **One working branch.** All agent work happens on
-   `arena/01a05887-hisaab-ai`, pushed to GitHub after each turn. `main` only
-   moves when you explicitly merge or open a PR, so your local `main` never
-   changes unexpectedly.
-2. **`.env` stays local.** It is gitignored and never committed. When a change
-   needs new variables, the agent supplies additive lines for you to append;
-   you fill in real values locally. The agent never asks for secret values in
-   chat.
-3. **Every change ships with mirroring instructions.** Any turn that creates,
-   edits, or deletes files must include:
-   - a summary table of every file touched,
-   - **Option A** — git sync commands (recommended),
-   - **Option B** — per-file PowerShell commands to reproduce the exact change
-     by hand,
-   - additive `.env` snippets when new keys are introduced.
+1. Edit files in VS Code as usual.
+2. Commit and push from PowerShell (commands below).
+3. Tell the agent in chat, e.g. "I've pushed to main".
+4. The agent runs `git fetch origin` and merges `origin/main` into
+   `arena/01a05887-hisaab-ai` in the workspace, then continues work on top of
+   your latest code.
 
-## Option A — sync with git (recommended)
+### Your local push commands (PowerShell)
 
 ```powershell
-# from your local repo root
-git fetch origin
-git switch arena/01a05887-hisaab-ai   # first time only; afterwards: git pull
-git pull
+cd C:\path\to\hisaab-ai
+git status              # review the change list
+git add -A              # stage everything (or stage specific files)
+git commit -m "Describe the change"
+git push origin main    # or just: git push (if you are on another branch)
 ```
 
-Pulls never touch `.env` because it is gitignored. If your git is older than
-2.23, use `git checkout arena/01a05887-hisaab-ai` instead of `git switch`.
+`.env` is gitignored, so `git add -A` will never stage it.
 
-## Option B — manual, per-file mirroring
+## Direction 2 — the agent changes code, you pick it up
 
-For when you want to stay on `main` or cherry-pick changes.
+1. The agent commits its work to `arena/01a05887-hisaab-ai` and pushes it to
+   GitHub at the end of every turn that changes files.
+2. Every such turn includes mirroring instructions:
+   - **Option A (recommended):** `git pull` on the agent's branch, or merge
+     that branch into your `main`.
+   - **Option B (manual):** per-file PowerShell here-strings or exact
+     find/replace pairs, so you can apply changes by hand while staying on
+     `main`.
+3. New `.env` keys are always given as additive `Add-Content` lines with
+   placeholders; you fill in real values locally. Secrets are never committed
+   and never requested in chat.
 
-- **New or fully replaced file:** the agent provides the complete file content
-  wrapped in a single-quoted PowerShell here-string (nothing is interpolated),
-  piped to `Set-Content -Encoding utf8`. A here-string's closing delimiter
-  must be the first thing on its own line at column 0.
-- **Edited file:** the agent shows either the complete new file content (paste
-  as above) or an exact "find this text → replace with this text" pair to
-  apply in VS Code.
-- **Deleted file:** `Remove-Item .\path\to\file.ext`
+### Your local pull commands (PowerShell)
 
-After applying, check `git status` and `git diff` before committing.
+```powershell
+cd C:\path\to\hisaab-ai
+git fetch origin
+git switch arena/01a05887-hisaab-ai   # first time only
+git pull                              # gets the agent's latest
+```
+
+To bring the agent's work into your `main` instead:
+
+```powershell
+git switch main
+git pull
+git merge arena/01a05887-hisaab-ai
+git push origin main
+```
 
 ## PowerShell notes
 
+- On Windows PowerShell 5.1, `Set-Content -Encoding utf8` writes a BOM. It is
+  harmless for these file types, or re-save from VS Code with "Save with
+  Encoding" → UTF-8. PowerShell 7+ (`pwsh`) avoids the BOM entirely.
+- Paste here-string blocks whole; the closing `'@` must sit at column 0.
 - Run all commands from the repository root.
-- On Windows PowerShell 5.1, `-Encoding utf8` writes a BOM. It is harmless for
-  these file types, or re-save from VS Code (encoding picker → "Save with
-  Encoding" → UTF-8). PowerShell 7+ (`pwsh`) avoids the BOM entirely.
-- Long here-strings must be pasted whole; if a paste looks truncated, re-copy
-  the entire fenced block.
 
 ## Local run checklist
 

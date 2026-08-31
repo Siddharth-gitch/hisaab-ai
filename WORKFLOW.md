@@ -1,65 +1,50 @@
 # Workflow — local VS Code (PowerShell) ↔ GitHub ↔ Arena agent
 
-This repository moves through three places. The GitHub repo
-(`Siddharth-gitch/hisaab-ai`) is the hub that keeps them in sync.
+The GitHub repo (`Siddharth-gitch/hisaab-ai`) is the hub. Development happens
+in the Arena chat workspace; changes are applied locally only at the end, when
+everything is complete and verified working.
 
 ## Environments
 
-1. **Local desktop** (Windows, VS Code, PowerShell) — your primary
-   development environment. You edit code here. Your local `.env` is the
-   single source of truth for configuration and secrets.
-2. **GitHub** (`origin`) — the hub. Your local pushes land here (usually on
-   `main`); the agent's pushes land on `arena/01a05887-hisaab-ai`.
-3. **Arena chat workspace** (`/home/user/hisaab-ai`) — a clone of the repo
-   where the agent picks up your latest code and builds improvements.
+1. **Local desktop** (Windows, VS Code, PowerShell) — the primary development
+   environment. The local `.env` is the single source of truth for
+   configuration and secrets.
+2. **GitHub** (`origin`, `Siddharth-gitch/hisaab-ai`) — the hub and backup.
+3. **Arena chat workspace** (`/home/user/hisaab-ai`) — where the agent does
+   all development work.
 
-## Direction 1 — you change code, the agent picks it up
+## Phase 1 — development (now)
 
-1. Edit files in VS Code as usual.
-2. Commit and push from PowerShell (commands below).
-3. Tell the agent in chat, e.g. "I've pushed to main".
-4. The agent runs `git fetch origin` and merges `origin/main` into
-   `arena/01a05887-hisaab-ai` in the workspace, then continues work on top of
-   your latest code.
+- The agent builds and tests features in the workspace, committing to
+  `arena/01a05887-hisaab-ai` and pushing to GitHub after every turn as a
+  checkpoint.
+- **No action is required locally.** The local checkout, `main`, and `.env`
+  stay untouched during this phase.
+- Every turn ends with a change summary, and `DEVLOG.md` in the repo keeps a
+  running manifest of every file created, modified, or deleted. Full
+  PowerShell mirroring instructions are provided at handoff (or on request at
+  any point).
 
-### Your local push commands (PowerShell)
+## Phase 2 — final handoff (when everything works)
 
-```powershell
-cd C:\path\to\hisaab-ai
-git status              # review the change list
-git add -A              # stage everything (or stage specific files)
-git commit -m "Describe the change"
-git push origin main    # or just: git push (if you are on another branch)
-```
+When the work is done and verified, the agent produces one complete handoff
+package:
 
-`.env` is gitignored, so `git add -A` will never stage it.
+1. **Full change manifest** — every file touched across all turns, sourced
+   from `DEVLOG.md`.
+2. **Option A (recommended):** git commands to merge the agent's branch into
+   `main` (or open a PR) and pull locally.
+3. **Option B (manual):** per-file PowerShell here-strings / find-replace
+   pairs to recreate every change by hand.
+4. **`.env` additions** — every new variable introduced during development,
+   as additive `Add-Content` lines with placeholders; real values are filled
+   in locally. Secrets are never committed and never requested in chat.
 
-## Direction 2 — the agent changes code, you pick it up
-
-1. The agent commits its work to `arena/01a05887-hisaab-ai` and pushes it to
-   GitHub at the end of every turn that changes files.
-2. Every such turn includes mirroring instructions:
-   - **Option A (recommended):** `git pull` on the agent's branch, or merge
-     that branch into your `main`.
-   - **Option B (manual):** per-file PowerShell here-strings or exact
-     find/replace pairs, so you can apply changes by hand while staying on
-     `main`.
-3. New `.env` keys are always given as additive `Add-Content` lines with
-   placeholders; you fill in real values locally. Secrets are never committed
-   and never requested in chat.
-
-### Your local pull commands (PowerShell)
+The user then runs the app locally, verifies, and pushes to `main`:
 
 ```powershell
 cd C:\path\to\hisaab-ai
 git fetch origin
-git switch arena/01a05887-hisaab-ai   # first time only
-git pull                              # gets the agent's latest
-```
-
-To bring the agent's work into your `main` instead:
-
-```powershell
 git switch main
 git pull
 git merge arena/01a05887-hisaab-ai
